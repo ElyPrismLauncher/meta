@@ -11,7 +11,7 @@ from cachecontrol import CacheControl  # type: ignore
 from cachecontrol.caches import FileCache  # type: ignore
 from urllib3.util.retry import Retry
 
-LAUNCHER_MAVEN = "https://files.prismlauncher.org/maven/%s"
+LAUNCHER_MAVEN = "https://elyprismlauncher.github.io/files/maven/%s"
 
 HTTP_RETRY = Retry(
     total=5,
