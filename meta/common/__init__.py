@@ -8,7 +8,7 @@ import requests
 from cachecontrol import CacheControl  # type: ignore
 from cachecontrol.caches import FileCache  # type: ignore
 
-LAUNCHER_MAVEN = "https://files.prismlauncher.org/maven/%s"
+LAUNCHER_MAVEN = "https://elyprismlauncher.github.io/files/maven/%s"
 
 
 def serialize_datetime(dt: datetime.datetime):
