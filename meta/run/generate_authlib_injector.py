@@ -1,10 +1,11 @@
+import base64
 import os
 from datetime import datetime
 from typing import Tuple, List
 
 from meta.common import launcher_path, upstream_path, ensure_component_dir
-from meta.common.authlib_injector import AUTHLIBINJECTOR_COMPONENT, VERSIONS_FILE
-from meta.model import MetaPackage, MetaVersion, Agent, GradleSpecifier, MojangLibraryDownloads, MojangArtifact
+from meta.common.authlib_injector import AUTHLIBINJECTOR_COMPONENT, VERSIONS_FILE, INJECTOR_METADATA_URL
+from meta.model import MetaPackage, MetaVersion, JavaAgent, GradleSpecifier, MojangLibraryDownloads, MojangArtifact
 from meta.model.authlib_injector import AuthlibInjectorIndex
 
 LAUNCHER_DIR = launcher_path()
@@ -13,9 +14,12 @@ UPSTREAM_DIR = upstream_path()
 ensure_component_dir(AUTHLIBINJECTOR_COMPONENT)
 
 def process_versions(index: AuthlibInjectorIndex) -> Tuple[List[MetaVersion], List[str]]:
+    prefetched_base64 = base64.b64encode(index.prefetched_metadata.encode("utf-8")).decode("utf-8")
+    jvm_args = ["-Dauthlibinjector.noLogFile", "-Dauthlibinjector.noShowServerName", f"-Dauthlibinjector.yggdrasil.prefetched={prefetched_base64}"]
+
     all_versions: List[MetaVersion] = []
     recommended = []
-    for entry in index.__root__:
+    for entry in index.versions:
         downloads = MojangLibraryDownloads(
             artifact=MojangArtifact(
                 url=entry.download_url,
@@ -23,10 +27,10 @@ def process_versions(index: AuthlibInjectorIndex) -> Tuple[List[MetaVersion], Li
                 sha1=entry.file_sha1
             )
         )
-        agent = Agent(
+        agent = JavaAgent(
             name=GradleSpecifier("moe.yushi", "authlibinjector", entry.version),
             downloads=downloads,
-            argument="https://account.ely.by/api/authlib-injector"
+            argument=INJECTOR_METADATA_URL
         )
 
         meta_version = MetaVersion(
@@ -35,14 +39,16 @@ def process_versions(index: AuthlibInjectorIndex) -> Tuple[List[MetaVersion], Li
             version=entry.version,
             release_time=datetime.fromisoformat(entry.published_at),
             java_agents=[agent],
-            additional_jvm_args=["-Dauthlibinjector.noLogFile", "-Dauthlibinjector.noShowServerName"],
+            additional_jvm_args=jvm_args,
             type="snapshot" if entry.prerelease else "release"
         )
         all_versions.append(meta_version)
         if entry.recommended:
             recommended.append(entry.version)
 
+    recommended.sort()
 
+    all_versions.sort(key=lambda x: x.release_time, reverse=True)
     return all_versions, recommended
 
 

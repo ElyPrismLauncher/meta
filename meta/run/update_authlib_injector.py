@@ -3,7 +3,7 @@ import hashlib
 import os
 
 from meta.common import upstream_path, ensure_upstream_dir, default_session
-from meta.common.authlib_injector import BASE_DIR, VERSIONS_FILE
+from meta.common.authlib_injector import BASE_DIR, RELEASES_API_URL, VERSIONS_FILE, INJECTOR_METADATA_URL
 from meta.model.authlib_injector import GitHubReleaseIndex, AuthlibInjectorVersion, AuthlibInjectorIndex, \
     GitHubReleaseEntry
 
@@ -31,15 +31,15 @@ def convert_to_authlib_injector(entry: GitHubReleaseEntry, is_recommended: bool)
         recommended=is_recommended
     )
 
+
 def main():
     print("Getting authlib-injector release manifests")
-    r = sess.get("https://api.github.com/repos/yushijinhun/authlib-injector/releases")
+    r = sess.get(RELEASES_API_URL)
     r.raise_for_status()
 
     main_json = r.json()
     github_index = GitHubReleaseIndex.parse_obj(main_json)
 
-    versions = []
     futures = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         has_recommended = False
@@ -49,11 +49,16 @@ def main():
             if recommended:
                 has_recommended = True
 
+    versions = []
     for future in futures:
         versions.append(future.result())
 
+    r = sess.get(INJECTOR_METADATA_URL)
+    r.raise_for_status()
+
     injector_index = AuthlibInjectorIndex(
-        __root__=versions
+        versions=versions,
+        prefetched_metadata=r.text
     )
     injector_index.write(os.path.join(UPSTREAM_DIR, VERSIONS_FILE))
 

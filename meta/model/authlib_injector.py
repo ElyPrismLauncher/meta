@@ -29,4 +29,5 @@ class AuthlibInjectorVersion(MetaBase):
 
 
 class AuthlibInjectorIndex(MetaBase):
-    __root__: List[AuthlibInjectorVersion]
+    versions: List[AuthlibInjectorVersion]
+    prefetched_metadata: str
